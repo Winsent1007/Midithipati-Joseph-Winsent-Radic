@@ -1,0 +1,103 @@
+class TaskManagerEnv:
+    def _init_(self):
+        # The 'real-world' state: a simple JSON database
+        self.db_path = "tasks_db.json"
+        self._initialize_db()
+        self.max_steps = 10
+        self.current_step = 0
+
+    def _initialize_db(self):
+        with open(self.db_path, "w") as f:
+            json.dump({"tasks": []}, f)
+
+    def state(self):
+        """Returns the current observation of the 'real world'."""
+        with open(self.db_path, "r") as f:
+            return json.load(f)
+
+    def reset(self):
+        """Resets the environment to a starting state."""
+        self._initialize_db()
+        self.current_step = 0
+        return self.state(), {}
+
+    def step(self, action):
+        """
+        Executes an action. 
+        Action format: {"cmd": "add", "task": "text"} or {"cmd": "done", "id": 0}
+        """
+        self.current_step += 1
+        reward = 0
+        data = self.state()
+        
+        # Real-world logic
+        if action["cmd"] == "add":
+            data["tasks"].append({"id": len(data["tasks"]), "text": action["task"], "status": "pending"})
+            reward = 1  # Reward for creating a task
+        elif action["cmd"] == "done":
+            idx = action["id"]
+            if 0 <= idx < len(data["tasks"]):
+                data["tasks"][idx]["status"] = "completed"
+                reward = 5  # High reward for completing a task
+        
+        # Save 'real-world' changes
+        with open(self.db_path, "w") as f:
+            json.dump(data, f)
+
+        terminated = self.current_step >= self.max_steps
+        return self.state(), reward, terminated, False, {}
+
+# --- Example Usage ---
+env = TaskManagerEnv()
+initial_state, _ = env.reset()
+print(f"Initial State: {initial_state}")
+
+# Agent decides to add a task
+next_state, reward, terminated, truncated, info = env.step({"cmd": "add", "task": "Learn Reinforcement Learning"})
+print(f"Reward after adding task: {reward}")
+print(f"Current State: {next_state}")
+def _init_(self, prices):
+        self.prices = prices
+        self.current_step = 0
+
+    def reset(self):
+        """Resets the environment to day 0 and returns the first price."""
+        self.current_step = 0
+        return self.prices[self.current_step]
+
+    def step(self, action):
+        """
+        Simulates moving to the next day.
+        Reward is calculated as the price difference from the previous day.
+        """
+        self.current_step += 1
+        
+        # Check if we reached the last day in our dataset
+        done = self.current_step >= len(self.prices) - 1
+        
+        # Calculate reward based on price movement (Profit or Loss)
+        reward = self.prices[self.current_step] - self.prices[self.current_step - 1]
+        next_state = self.prices[self.current_step]
+        
+        return next_state, reward, done
+
+# --- Simulation Loop ---
+# Mock data: Stock prices over 5 days
+prices = [100, 105, 102, 110, 120]
+env = TradingEnv(prices)
+
+# Start the session
+current_state = env.reset()
+print(f"Starting Price: {current_state}")
+print("-" * 30)
+
+for _ in range(len(prices)-1):
+    # Example logic: AI decides to 'Buy' (Action 1)
+    action = 1 
+    next_state, reward, done = env.step(action)
+    
+    print(f"State (Price): {next_state} | Reward: {reward}")
+    if done:
+        print("-" * 30)
+        print("Episode Finished")
+        break
